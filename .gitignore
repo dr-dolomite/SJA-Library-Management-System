@@ -42,3 +42,5 @@ next-env.d.ts
 
 # impeccable local cache
 .impeccable/*.cache.json
+
+/lib/generated/prisma

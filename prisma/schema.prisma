@@ -1,0 +1,192 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  // Prisma 7: connection URLs live in prisma.config.ts (migrations, DIRECT_URL)
+  // and in the PrismaClient driver adapter (runtime, DATABASE_URL — see lib/prisma.ts).
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  role          String?
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  sessions          Session[]
+  accounts          Account[]
+  loansBorrowed     Loan[]             @relation("LoansBorrowed")
+  loansReturned     Loan[]             @relation("LoansReturned")
+  venueReservations VenueReservation[] @relation("VenueReservations")
+  auditLogs         AuditLog[]         @relation("AuditLogs")
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ─── Business enums ───────────────────────────────────────────────────────────
+
+enum BorrowerStatus {
+  active
+  inactive
+}
+
+enum CopyStatus {
+  available
+  borrowed
+  lost
+}
+
+enum ReservationStatus {
+  booked
+  cancelled
+  completed
+}
+
+// ─── Business models ──────────────────────────────────────────────────────────
+
+model Borrower {
+  id        String         @id @default(uuid()) @db.Uuid
+  cardQr    String         @unique @map("card_qr")
+  fullName  String         @map("full_name")
+  email     String?        @unique
+  phone     String?
+  status    BorrowerStatus @default(active)
+  createdAt DateTime       @default(now()) @map("created_at")
+  loans     Loan[]
+
+  @@map("borrowers")
+}
+
+model Book {
+  id        String     @id @default(uuid()) @db.Uuid
+  title     String
+  author    String?
+  isbn      String?
+  createdAt DateTime   @default(now()) @map("created_at")
+  copies    BookCopy[]
+
+  @@map("books")
+}
+
+model BookCopy {
+  id        String     @id @default(uuid()) @db.Uuid
+  bookId    String     @map("book_id") @db.Uuid
+  copyQr    String     @unique @map("copy_qr")
+  status    CopyStatus @default(available)
+  createdAt DateTime   @default(now()) @map("created_at")
+  book      Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  loans     Loan[]
+
+  @@index([bookId])
+  @@map("book_copies")
+}
+
+model Loan {
+  id         String    @id @default(uuid()) @db.Uuid
+  copyId     String    @map("copy_id") @db.Uuid
+  borrowerId String    @map("borrower_id") @db.Uuid
+  borrowedBy String    @map("borrowed_by")   // -> user(id), TEXT (no @db.Uuid)
+  returnedTo String?   @map("returned_to")   // -> user(id), TEXT (no @db.Uuid)
+  borrowedAt DateTime  @default(now()) @map("borrowed_at")
+  dueAt      DateTime  @map("due_at")
+  returnedAt DateTime? @map("returned_at")
+  copy           BookCopy @relation(fields: [copyId], references: [id])
+  borrower       Borrower @relation(fields: [borrowerId], references: [id])
+  borrowedByUser User     @relation("LoansBorrowed", fields: [borrowedBy], references: [id])
+  returnedToUser User?    @relation("LoansReturned", fields: [returnedTo], references: [id])
+
+  @@index([copyId])
+  @@index([borrowerId])
+  @@index([borrowedBy])
+  @@map("loans")
+}
+
+model VenueReservation {
+  id         String            @id @default(uuid()) @db.Uuid
+  reservedBy String            @map("reserved_by")   // -> user(id), TEXT (no @db.Uuid)
+  startsAt   DateTime          @map("starts_at") @db.Timestamptz(6)
+  endsAt     DateTime          @map("ends_at") @db.Timestamptz(6)
+  status     ReservationStatus @default(booked)
+  createdAt  DateTime          @default(now()) @map("created_at")
+  reservedByUser User          @relation("VenueReservations", fields: [reservedBy], references: [id])
+
+  @@index([reservedBy])
+  @@map("venue_reservations")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actor      String?  @map("actor")          // -> user(id), TEXT (no @db.Uuid)
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+  actorUser  User?    @relation("AuditLogs", fields: [actor], references: [id])
+
+  @@index([actor])
+  @@map("audit_logs")
+}

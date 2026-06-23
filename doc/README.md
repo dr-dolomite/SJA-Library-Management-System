@@ -7,7 +7,7 @@ does **not** hold deep detail. When a feature ships, its full design, schema, de
 go in `doc/<feature>/`, and CLAUDE.md gets a one-line reference pointing here.
 
 Examples (created as features are built):
-- `doc/foundation/` — auth, schema, RLS, data layer, QR tokens
+- `doc/foundation/` — Better Auth, Prisma schema, app-layer authorization, data layer, QR tokens
 - `doc/circulation/` — borrow / return flows
 - `doc/venue-reservation/` — whole-library booking
 - `doc/exports/` — CSV/Excel generation

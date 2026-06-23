@@ -1,18 +1,30 @@
 # Foundation
 
-The first slice. It builds the skeleton every later module hangs on: **Supabase wiring, the full
-data model, staff auth + RLS, the role-gated app shell, the data-access layer, and QR token
-identity.** No circulation/venue/export/admin *flows* yet — just the bones they attach to.
+The first slice. It builds the skeleton every later module hangs on: **Prisma + Better Auth wiring,
+the full data model, staff auth + app-layer authorization, the role-gated app shell, the
+data-access layer, and QR token identity.** No circulation/venue/export/admin *flows* yet — just
+the bones they attach to.
 
 > CLAUDE.md is the project index. This file is the depth for Foundation. Date: 2026-06-23.
 
+> **Doc check.** Better Auth and Prisma 7 APIs/CLI evolve fast. Treat every code snippet below as
+> *illustrative*, not final. Before implementing, confirm the current syntax via **context7** for:
+> Better Auth (Prisma adapter, admin plugin, the Next.js catch-all handler, `getSession`) and
+> Prisma 7 (generator/config block, `migrate dev`/`deploy`, pooled vs. direct URL). Pin the exact
+> signatures you find — do not trust the shapes shown here verbatim.
+
 ## Deliverables (definition of done)
 
-- Supabase project connected; three typed clients in `lib/supabase/`.
-- All tables created via a versioned migration, RLS enabled, policies in place.
-- First admin seeded; login works; `(app)/*` requires a session; `(app)/admin/*` requires `admin`.
+- Supabase Postgres connected as a plain managed database; Prisma Client singleton in `lib/prisma.ts`.
+- `prisma/schema.prisma` is the single source of truth; all tables created via `prisma migrate dev`,
+  the venue exclusion constraint added via a manual (`--create-only`) migration.
+- Better Auth wired (server `lib/auth.ts`, browser `lib/auth-client.ts`, route handler
+  `app/api/auth/[...all]/route.ts`); its `user`/`session`/`account`/`verification` tables generated
+  into `prisma/schema.prisma` and migrated by Prisma.
+- First admin seeded via Better Auth's server API; login works; `(app)/*` requires a session;
+  `(app)/admin/*` requires the `admin` role.
 - `lib/data/*` read functions + a Server Action write pattern established (with one real example
-  each, e.g. create a borrower).
+  each, e.g. create a borrower), each authorizing on the current Better Auth session.
 - QR token generator (`lib/qr.ts`) producing unique `cpy_…` / `brw_…` tokens.
 - `logActivity()` audit helper writing to `audit_logs`.
 - Vitest installed with at least the QR-token unit test green.
@@ -22,102 +34,133 @@ later slices.
 
 ## Tech decisions
 
-- **Schema is code:** `supabase/migrations/*.sql` is the source of truth (Supabase CLI). DB types
-  generated via `supabase gen types typescript` into `lib/database.types.ts`.
-- **Role lives in `app_metadata`** (admin-controlled, rides in the JWT). RLS reads it *from the
-  JWT*, never by querying `profiles` — avoids policy recursion.
-- **Opaque QR tokens** generated app-side with a prefixed nanoid; stored `unique not null`.
-- **Venue double-booking is prevented in the DB** with a `gist` exclusion constraint.
+- **Schema is code:** `prisma/schema.prisma` is the source of truth. The typed Prisma Client is
+  produced by `prisma generate` (this replaces `supabase gen types` / `lib/database.types.ts`).
+  Migrations run via `prisma migrate dev` (dev) and `prisma migrate deploy` (prod).
+- **One privileged DB connection.** Prisma connects as a single role; the database no longer
+  enforces per-user access. **Authorization is an app-layer concern** (see below).
+- **Auth is Better Auth.** Email/password with **public sign-up disabled** (staff only); the
+  **admin plugin** supplies the `role` field, admin-provisioned account creation, user listing, and
+  disable/ban. **Database-backed sessions** with an HTTP-only cookie — not a Supabase JWT, and the
+  role is *not* in `app_metadata`.
+- **Opaque QR tokens** generated app-side with a prefixed nanoid; stored `@unique` and not null.
+- **Venue double-booking is prevented in the DB** with a `gist` exclusion constraint. Prisma cannot
+  express it, so it is added through a manual migration (see Data model).
 
 ## Data model
 
-Enums:
+Enums are native Prisma enums (mapped to Postgres enum types). Note: there is **no** `user_role` /
+`user_status` mirror — staff role comes from the Better Auth admin plugin, and the disabled state is
+Better Auth's `banned` flag.
 
-```sql
-create type user_role        as enum ('admin', 'librarian');
-create type user_status      as enum ('active', 'disabled');
-create type borrower_status  as enum ('active', 'inactive');
-create type copy_status      as enum ('available', 'borrowed', 'lost', 'maintenance');
-create type reservation_status as enum ('booked', 'cancelled', 'completed');
+```prisma
+enum BorrowerStatus    { active inactive }
+enum CopyStatus        { available borrowed lost maintenance }
+enum ReservationStatus { booked cancelled completed }
 ```
 
-Tables (sketch — final column types refined during implementation):
+Staff identity is the **Better Auth `user` table** (generated into the schema by the Better Auth
+CLI, then migrated by Prisma). It carries the admin-plugin `role` field (`"admin"` | `"librarian"`),
+Better Auth's `name` (full name), and `banned` (the disabled state). It **replaces the old
+`profiles` table** — every staff FK now references `user(id)`. Better Auth also owns `session`,
+`account`, and `verification`; do not hand-author those.
 
-```sql
--- staff mirror of auth.users (role duplicated here from app_metadata for UI listing)
-create table profiles (
-  id         uuid primary key references auth.users(id) on delete cascade,
-  full_name  text not null,
-  role       user_role not null,
-  status     user_status not null default 'active',
-  created_at timestamptz not null default now()
-);
+Business tables (sketch — final column types refined during implementation):
 
-create table borrowers (
-  id         uuid primary key default gen_random_uuid(),
-  card_qr    text unique not null,            -- "brw_…"
-  full_name  text not null,
-  email      text,
-  phone      text,
-  status     borrower_status not null default 'active',
-  created_at timestamptz not null default now()
-);
+```prisma
+model Borrower {
+  id        String         @id @default(uuid())
+  cardQr    String         @unique @map("card_qr")   // "brw_…"
+  fullName  String         @map("full_name")
+  email     String?
+  phone     String?
+  status    BorrowerStatus @default(active)
+  createdAt DateTime       @default(now()) @map("created_at")
 
-create table books (                          -- titles
-  id             uuid primary key default gen_random_uuid(),
-  isbn           text,
-  title          text not null,
-  author         text not null,
-  publisher      text,
-  published_year int,
-  category       text,
-  created_at     timestamptz not null default now()
-);
+  loans        Loan[]
+  reservations VenueReservation[]
+  @@map("borrowers")
+}
 
-create table book_copies (                    -- physical objects
-  id          uuid primary key default gen_random_uuid(),
-  book_id     uuid not null references books(id) on delete cascade,
-  copy_qr     text unique not null,           -- "cpy_…"
-  status      copy_status not null default 'available',
-  condition   text,
-  acquired_at timestamptz not null default now()
-);
+model Book {                                          // titles
+  id            String   @id @default(uuid())
+  isbn          String?
+  title         String
+  author        String
+  publisher     String?
+  publishedYear Int?     @map("published_year")
+  category      String?
+  createdAt     DateTime @default(now()) @map("created_at")
 
-create table loans (
-  id          uuid primary key default gen_random_uuid(),
-  copy_id     uuid not null references book_copies(id),
-  borrower_id uuid not null references borrowers(id),
-  borrowed_by uuid not null references profiles(id),
-  borrowed_at timestamptz not null default now(),
-  due_at      timestamptz not null,
-  returned_at timestamptz,
-  returned_to uuid references profiles(id)
-);
+  copies BookCopy[]
+  @@map("books")
+}
 
-create table venue_reservations (
-  id          uuid primary key default gen_random_uuid(),
-  borrower_id uuid not null references borrowers(id),
-  reserved_by uuid not null references profiles(id),
-  starts_at   timestamptz not null,
-  ends_at     timestamptz not null,
-  purpose     text,
-  status      reservation_status not null default 'booked',
-  created_at  timestamptz not null default now(),
-  check (ends_at > starts_at)
-);
+model BookCopy {                                      // physical objects
+  id         String     @id @default(uuid())
+  bookId     String     @map("book_id")
+  copyQr     String     @unique @map("copy_qr")       // "cpy_…"
+  status     CopyStatus @default(available)
+  condition  String?
+  acquiredAt DateTime   @default(now()) @map("acquired_at")
 
-create table audit_logs (
-  id          uuid primary key default gen_random_uuid(),
-  actor       uuid references profiles(id),   -- null = system
-  action      text not null,
-  entity_type text,
-  entity_id   uuid,
-  metadata    jsonb not null default '{}',
-  created_at  timestamptz not null default now()
-);
+  book  Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  loans Loan[]
+  @@map("book_copies")
+}
+
+model Loan {
+  id         String    @id @default(uuid())
+  copyId     String    @map("copy_id")
+  borrowerId String    @map("borrower_id")
+  borrowedBy String    @map("borrowed_by")            // -> user(id)
+  borrowedAt DateTime  @default(now()) @map("borrowed_at")
+  dueAt      DateTime  @map("due_at")
+  returnedAt DateTime? @map("returned_at")
+  returnedTo String?   @map("returned_to")            // -> user(id)
+
+  copy            BookCopy @relation(fields: [copyId], references: [id])
+  borrower        Borrower @relation(fields: [borrowerId], references: [id])
+  borrowedByStaff User     @relation("LoanBorrowedBy", fields: [borrowedBy], references: [id])
+  returnedToStaff User?    @relation("LoanReturnedTo", fields: [returnedTo], references: [id])
+  @@map("loans")
+}
+
+model VenueReservation {
+  id         String            @id @default(uuid())
+  borrowerId String            @map("borrower_id")
+  reservedBy String            @map("reserved_by")    // -> user(id)
+  startsAt   DateTime          @map("starts_at")
+  endsAt     DateTime          @map("ends_at")
+  purpose    String?
+  status     ReservationStatus @default(booked)
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  borrower      Borrower @relation(fields: [borrowerId], references: [id])
+  reservedByStaff User   @relation(fields: [reservedBy], references: [id])
+  @@map("venue_reservations")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actor      String?                                  // -> user(id), null = system
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actorStaff User? @relation(fields: [actor], references: [id])
+  @@map("audit_logs")
+}
 ```
 
-DB-level guarantees:
+> The `User` model (Better Auth + admin plugin) gains the inverse relation fields for the FKs above
+> (`borrowedBy`, `returnedTo`, `reservedBy`, `actor`). Add them when wiring the relations; keep the
+> Better-Auth-generated columns otherwise untouched.
+
+**DB-level guarantees (manual migration).** Prisma cannot express a `gist` exclusion constraint, so
+generate an empty migration with `prisma migrate dev --create-only`, then hand-edit its SQL:
 
 ```sql
 -- whole-library: no two active bookings may overlap in time
@@ -126,39 +169,50 @@ alter table venue_reservations add constraint venue_no_overlap
   exclude using gist (tstzrange(starts_at, ends_at) with &&) where (status = 'booked');
 ```
 
-## RLS
+The `check (ends_at > starts_at)` guard can be added in the same hand-edited migration.
 
-Enable RLS on every table. Role helper reads the JWT claim:
+## Authorization (app layer)
 
-```sql
-create or replace function public.auth_role() returns text
-  language sql stable as $$ select coalesce(auth.jwt()->'app_metadata'->>'role', '') $$;
-```
+**The server data layer is the security boundary — not the database.** Prisma connects with one
+privileged role, so there is no per-user enforcement in Postgres (no RLS). Every read in
+`lib/data/*` and every write Server Action resolves the current Better Auth session
+(`auth.api.getSession({ headers: await headers() })`) and checks `session.user.role` before
+touching data. Role-gated navigation stays **UX-only**.
 
-Policy summary:
+Access matrix (enforced in the data layer):
 
-| Table | Read | Write |
+| Resource | Read | Write |
 |---|---|---|
 | `books`, `book_copies`, `borrowers`, `loans`, `venue_reservations` | librarian + admin | librarian + admin |
-| `profiles` | librarian + admin (read) | **admin only** |
-| `audit_logs` | **admin only** | any authenticated `insert` |
+| staff `user` records | librarian + admin (read) | **admin only** (via admin plugin) |
+| `audit_logs` | **admin only** | any authenticated session (`logActivity`) |
 
-Example:
+A thin helper centralizes the check, e.g.:
 
-```sql
-alter table borrowers enable row level security;
-create policy borrowers_rw on borrowers for all
-  using (public.auth_role() in ('admin','librarian'))
-  with check (public.auth_role() in ('admin','librarian'));
+```ts
+// lib/authz.ts (illustrative — confirm getSession shape via context7)
+export async function requireRole(roles: Array<"admin" | "librarian">) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !roles.includes(session.user.role)) throw new Error("Forbidden");
+  return session;
+}
 ```
 
 ## Auth
 
-- **No public signup.** First admin seeded via a one-off server script using the service-role key:
-  create the auth user, set `app_metadata.role = 'admin'`, insert the `profiles` row.
-- Admins create further staff the same way from the (later) admin module.
-- **Login** uses the browser client; **session refresh** happens in `middleware.ts`.
-- `(app)/*` redirects to `/login` without a session; `(app)/admin/*` 404s/redirects for non-admins.
+- **Better Auth, email/password, public sign-up disabled** —
+  `emailAndPassword: { enabled: true, disableSignUp: true }`. Staff only; no patron/public accounts.
+- **Admin plugin** owns the `role` field and provisioning. Admins create further staff with
+  `auth.api.createUser(...)` from the (later) admin module; the same plugin powers user listing and
+  disable/ban (`banned`).
+- **First admin** is created by a one-off seed script that calls Better Auth's **server API**
+  (replaces the old Supabase service-role seed): create the user, then set `role: "admin"` via the
+  admin plugin.
+- **Database-backed sessions** (the `session` table) with an HTTP-only session cookie. Server code
+  reads it via `auth.api.getSession({ headers: await headers() })`.
+- **Route guard** in `middleware.ts`: `(app)/*` redirects to `/login` without a session;
+  `(app)/admin/*` redirects/404s for non-admins. The browser client (`createAuthClient`) drives
+  login from the `(auth)/login` page.
 
 ## App structure
 
@@ -168,18 +222,54 @@ app/(app)/layout.tsx              role-aware shell (nav)
 app/(app)/dashboard/
 app/(app)/catalog/  borrowers/    scaffolded in Foundation
 app/(app)/admin/                  admin-gated (built in slice 5)
-middleware.ts                     session refresh + route guard
+app/api/auth/[...all]/route.ts    Better Auth handler — toNextJsHandler(auth)
+middleware.ts                     session check + route guard
 
-lib/supabase/{client,server,admin}.ts
+lib/prisma.ts                     server-only Prisma Client singleton
+lib/auth.ts                       Better Auth server instance (prismaAdapter + admin plugin)
+lib/auth-client.ts                createAuthClient (better-auth/react), browser
+lib/authz.ts                      requireRole() session/role gate
 lib/data/*.ts                     server-only reads, one per entity
 lib/qr.ts                         token generator + helpers
 lib/audit.ts                      logActivity()
-lib/database.types.ts             generated
-supabase/migrations/*.sql
+prisma/schema.prisma              single source of truth (incl. Better Auth tables)
+prisma/migrations/*.sql           Prisma Migrate (one hand-edited for the gist constraint)
 ```
 
-- **Reads:** `lib/data/*` functions called from Server Components.
+- **`lib/prisma.ts`** is guarded with `server-only` and is **never** imported into a Client
+  Component.
+- **Reads:** `lib/data/*` functions called from Server Components (Prisma queries).
 - **Writes:** Server Actions (`app/**/actions.ts`) calling those functions; revalidate as needed.
+
+Illustrative wiring (confirm exact APIs via **context7** before use):
+
+```ts
+// lib/prisma.ts
+import "server-only";
+import { PrismaClient } from "@prisma/client";
+const g = globalThis as unknown as { prisma?: PrismaClient };
+export const prisma = g.prisma ?? new PrismaClient();
+if (process.env.NODE_ENV !== "production") g.prisma = prisma;
+
+// lib/auth.ts
+import { betterAuth } from "better-auth";
+import { admin } from "better-auth/plugins";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { prisma } from "@/lib/prisma";
+export const auth = betterAuth({
+  database: prismaAdapter(prisma, { provider: "postgresql" }),
+  emailAndPassword: { enabled: true, disableSignUp: true },
+  plugins: [admin()],
+});
+
+// app/api/auth/[...all]/route.ts
+import { toNextJsHandler } from "better-auth/next-js";
+import { auth } from "@/lib/auth";
+export const { GET, POST } = toNextJsHandler(auth);
+```
+
+Better Auth's tables are scaffolded into `prisma/schema.prisma` with
+`npx @better-auth/cli generate`, then applied with `prisma migrate dev`.
 
 ## QR tokens
 
@@ -191,9 +281,10 @@ concern layered on later.
 ## Env
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=        # server-only, never NEXT_PUBLIC_
+DATABASE_URL=        # pooled Supabase connection (pgBouncer, port 6543, append ?pgbouncer=true) — runtime Prisma Client
+DIRECT_URL=          # direct Supabase connection (port 5432) — Prisma Migrate / introspection
+BETTER_AUTH_SECRET=  # Better Auth signing secret
+BETTER_AUTH_URL=     # app base URL, e.g. http://localhost:3000
 ```
 
 ## Open questions

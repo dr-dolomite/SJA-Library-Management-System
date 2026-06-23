@@ -47,15 +47,20 @@ the task — the tool disappears). Personality: **efficient, calm, trustworthy**
 tool disappears, one state of truth shown plainly, earned familiarity over novelty, density with
 breathing room, trust through consistency. Bar: **WCAG 2.1 AA**, **fully responsive** (desktop
 desk + tablet shelf-scanning + phone lookups). Anti-references: dated gov/library software,
-generic AI-SaaS templates, heavy enterprise. Visual system (`DESIGN.md`) is deferred until the
-first real surface commits a brand color — branding stays at shadcn defaults until then.
+generic AI-SaaS templates, heavy enterprise. Visual system lives in **`DESIGN.md`** (+ tokens in
+`app/globals.css`): St. Joseph's **pine green `#1a4231`** is the one primary-action color,
+**gold `#c8a126`** is reserved for selection/emphasis (the "Gilt Rule"), white content surface,
+deep-green sidebar. Type is **Geist** (UI) + **Geist Mono** (QR tokens / IDs / data). All tokens
+OKLCH, AA-verified.
 
 ## Stack
 
 Next.js 16 (App Router, **React Server Components**), React 19, TypeScript, Tailwind v4,
-**shadcn** (`radix-nova` style, `neutral` base — see `components.json`), **Supabase** (Postgres +
-Auth), **pnpm**. Branding is intentionally left at shadcn defaults; Impeccable branding is wired
-manually later.
+**shadcn** (`radix-nova` style, `neutral` base — see `components.json`), **Prisma 7** (ORM,
+typed client), **Better Auth** (staff auth + admin plugin), **Supabase Postgres** (plain managed
+Postgres host only — instance, connection pooler, dashboard, managed backups), **pnpm**. St.
+Joseph's brand tokens (pine green / gold) are wired in `app/globals.css`; see `DESIGN.md` for the
+system.
 
 ## Commands
 
@@ -75,29 +80,36 @@ testable unit lands; it is not installed yet.
 **UI prefers shadcn.** Use existing shadcn components; only hand-roll a component when shadcn
 has no equivalent. Add components via the shadcn CLI, don't paste them by hand.
 
-**Three Supabase clients, three trust levels** — keep them in separate files so the dangerous
-one can't leak into the browser:
-- `lib/supabase/client.ts` — browser, anon key, RLS-bound.
-- `lib/supabase/server.ts` — per-request server client (reads the user's session cookie), RLS-bound.
-- `lib/supabase/admin.ts` — **service-role, server-only, bypasses RLS**. Used only to provision
-  staff accounts. The service-role key must never be exposed to a Client Component or `NEXT_PUBLIC_*`.
+**One server-only Prisma client; Better Auth split server/browser** — keep the trust boundary in
+the file layout:
+- `lib/prisma.ts` — the single server-only Prisma Client singleton (guarded by `server-only`),
+  connecting with one privileged DB role. **Never** imported into a Client Component.
+- `lib/auth.ts` — the server Better Auth instance (Prisma adapter, email/password with public
+  sign-up disabled, admin plugin, database-backed sessions).
+- `lib/auth-client.ts` — the browser client (`createAuthClient` from `better-auth/react`).
+- `app/api/auth/[...all]/route.ts` — the catch-all route handler mounting Better Auth via
+  `toNextJsHandler(auth)`.
 
 **Reads vs writes boundary** — pages never embed raw queries:
 - **Reads** live in server-only data-access functions under `lib/data/*` and are called from
   Server Components.
 - **Writes** go through **Server Actions** (`app/**/actions.ts`) that call those same functions.
 
-**The database is the security boundary, not the UI.** Role-gated navigation is UX only. Access
-is enforced by **Row Level Security** keyed on the `role` claim in the JWT (stored in Supabase
-`app_metadata`, never `user_metadata`). RLS reads role *from the JWT*, not by querying `profiles`,
-to avoid policy recursion.
+**The server data layer is the security boundary, not the UI.** Prisma connects with one
+privileged role, so the database no longer enforces per-user access. Authorization is enforced in
+the server data layer — `lib/data/*` reads and Server Actions writes — by checking the role on the
+current Better Auth session (`auth.api.getSession({ headers: await headers() })`). Role-gated
+navigation is UX only.
 
-**Auth is admin-provisioned** — there is no public signup. The first admin is seeded; admins
-create further staff from the admin module.
+**Auth is admin-provisioned** — there is no public signup (Better Auth email/password with
+`disableSignUp: true`). The first admin is created by a one-off seed script that calls Better
+Auth's server API; admins then create further staff via the Better Auth **admin plugin**
+(`auth.api.createUser`), which also owns the `role` field (`admin` / `librarian`) and disable/ban.
 
-**Schema is code.** `supabase/migrations/*.sql` is the source of truth (managed via the Supabase
-CLI), and TypeScript DB types are generated with `supabase gen types` so they can't drift. Do not
-hand-edit schema in the Supabase dashboard.
+**Schema is code.** `prisma/schema.prisma` is the single source of truth (Better Auth's `user` /
+`session` / `account` / `verification` tables are generated into it via the Better Auth CLI). The
+typed Prisma Client is produced by `prisma generate`; migrations run via `prisma migrate dev`
+(dev) / `prisma migrate deploy` (prod). Do not hand-edit schema in the Supabase dashboard.
 
 ## Data model essentials
 
@@ -109,8 +121,13 @@ borrow a *copy*, not a *title*.
 Each scan is a single DB lookup — the app is a translator, the database stores only tokens. No
 data is encoded in the QR itself.
 
-Other core tables: `profiles` (staff + role), `borrowers`, `loans`, `venue_reservations`
-(overlap-prevented at the DB level), `audit_logs` (the admin "debug logs" view).
+Staff identity is the **Better Auth `user` table** (no separate `profiles` table): the admin-plugin
+`role` field, Better Auth's `name` for full name, and `banned` for the disabled state. Every staff
+FK references `user(id)` (`loans.borrowed_by`, `loans.returned_to`, `venue_reservations.reserved_by`,
+`audit_logs.actor`).
+
+Other core tables: `borrowers`, `loans`, `venue_reservations` (overlap-prevented at the DB level via
+a Postgres gist exclusion constraint), `audit_logs` (the admin "debug logs" view).
 
 ## Build order
 
@@ -121,13 +138,14 @@ layer, QR tokens → **(2) Circulation** → **(3) Venue reservation** → **(4)
 ## Conventions
 
 - **pnpm only.** All scripts and docs assume pnpm.
-- **Env:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (public);
-  `SUPABASE_SERVICE_ROLE_KEY` (server-only). Live in `.env.local`.
+- **Env:** `DATABASE_URL` (pooled Supabase connection — pgBouncer, port 6543, `?pgbouncer=true` —
+  used by the Prisma Client at runtime), `DIRECT_URL` (direct connection, port 5432, for Prisma
+  Migrate / introspection), `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`. Live in `.env.local`.
 - Aliases (`components.json`): `@/components`, `@/components/ui`, `@/lib`, `@/lib/utils`, `@/hooks`.
 
 ## Current state
 
 Fresh `create-next-app` scaffold: `app/` (layout + page), one shadcn component
-(`components/ui/button.tsx`), `lib/utils.ts`. Supabase, the data layer, migrations, and tests do
-not exist yet — the architecture above is the agreed target, not yet built. Foundation is
+(`components/ui/button.tsx`), `lib/utils.ts`. Prisma, Better Auth, the data layer, migrations, and
+tests do not exist yet — the architecture above is the agreed target, not yet built. Foundation is
 specced and planned in `doc/foundation/` (design + implementation plan), not yet implemented.
