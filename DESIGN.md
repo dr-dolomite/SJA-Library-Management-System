@@ -255,13 +255,37 @@ use a hairline border or a quiet-surface fill instead.
   ~50% opacity and removes pointer events.
 
 ### Navigation (Sidebar)
-- **Style:** A single deep pine-green panel (`sidebar`) — the system's identity surface.
+- **Style:** A single deep pine-green panel (`sidebar`) — the system's identity surface, **lit
+  from above**. Rather than a flat fill, the panel carries a subtle top-lit gradient: a soft
+  ambient glow near the brand, a gentle vertical deepening toward the floor, and a 1px specular
+  highlight on the top edge. Same pine identity, far less visual weight (see the Lit-Panel Rule).
 - **Items:** Near-white labels (Geist, label size). Hover lifts to a slightly lighter green
-  (`sidebar-accent`).
+  (`sidebar-accent`) and the item nudges 2px toward the content with its icon lifting a hair —
+  a tactile, Apple-like response on the Apple easing curve. Items stagger in once on load.
 - **Active item:** Marked with Academy Gold (`sidebar-primary`) — the "you are here" gilt.
 - **Mobile:** The sidebar collapses to an off-canvas drawer (structural responsive behavior,
   not fluid type); content reflows to a single column. Comfortable touch targets for tablet
   shelf-scanning and phone lookups.
+
+### Motion
+Motion conveys state and arrival, never decoration. Apple-inspired easing is a design token:
+**`--ease-apple`** (`cubic-bezier(0.32, 0.72, 0, 1)` — the iOS sheet curve: decisive off the
+mark, long soft settle, no bounce or elastic) for interactions and the panel collapse;
+**`--ease-out-quart`** for entrances.
+
+- **Interactions** (hover, press, active): 150–250ms on the Apple curve. Press feedback is a
+  subtle `scale(0.98)`; hover is a 2px indent + icon lift. State change only.
+- **Page content** reveals on each navigation (`view-in`: a 10px rise + fade, ~500ms) so a
+  screen "arrives" rather than snapping. The sidebar and header stay put.
+- **Reveals settle on an already-visible default.** Content is never gated behind a transition
+  that might not run; `prefers-reduced-motion` collapses every entrance to nothing.
+
+### Named Rules
+**The Lit-Panel Rule.** The sidebar gradient is *light, not decoration* — a single soft light
+source from above giving the pine surface dimension. It stays within the brand hue (163) and
+low chroma; it never becomes a multi-hue, high-contrast, or "marketing" gradient. This is the
+**only** surface that carries a gradient. Everywhere else stays flat (the Flat-By-Default Rule),
+and gradient *text* remains banned outright.
 
 ## 6. Do's and Don'ts
 
@@ -277,6 +301,10 @@ use a hairline border or a quiet-surface fill instead.
 - **Do** hold body and placeholder text at ≥4.5:1 — use Ink (`#1d2b25`) and Muted Ink
   (`#5b6b63`), never a lighter gray "for elegance."
 - **Do** keep resting surfaces flat; reserve shadows for things that actually float.
+- **Do** treat the sidebar's top-lit gradient as the one sanctioned gradient (the Lit-Panel
+  Rule): single brand hue, low chroma, light-as-depth — never let it drift multi-hue or loud.
+- **Do** move on the Apple easing curve (`--ease-apple`) for interactions; let content arrive
+  with a calm reveal, and always honor `prefers-reduced-motion`.
 
 ### Don't:
 - **Don't** recreate **dated gov/library software**: cramped gray tables, tiny hit-targets,
@@ -289,6 +317,9 @@ use a hairline border or a quiet-surface fill instead.
   tint every ghost hover gold. Use the dedicated `--gold` / `--gold-foreground` tokens.
 - **Don't** introduce a second button fill color to mean "also important" (the One-Green Rule).
 - **Don't** set labels or headings in monospace for flavor (the Mono-Means-Token Rule).
-- **Don't** use a colored side-stripe (`border-left > 1px`), gradient text, or decorative
-  glassmorphism anywhere.
+- **Don't** use a colored side-stripe (`border-left > 1px`), gradient *text*
+  (`background-clip: text`), multi-hue / "marketing" gradients, or decorative glassmorphism
+  anywhere. The lone exception is the sidebar's single-hue lit gradient (the Lit-Panel Rule).
+- **Don't** add decorative motion. Animation conveys state or arrival only; no orchestrated
+  page-load choreography beyond the single content reveal.
 - **Don't** put a drop shadow on static, resting content (the Flat-By-Default Rule).

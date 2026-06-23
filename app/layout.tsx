@@ -39,9 +39,11 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col">
-        <main>
+        {/* Layout wrapper only — each route owns its own <main> landmark
+            (the auth pages render one; the app shell's SidebarInset is one). */}
+        <div className="flex min-h-full flex-1 flex-col">
           <TooltipProvider>{children}</TooltipProvider>
-        </main>
+        </div>
         <Toaster />
       </body>
     </html>
