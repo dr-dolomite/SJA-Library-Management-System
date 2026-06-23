@@ -26,8 +26,12 @@ model User {
   banned        Boolean?  @default(false)
   banReason     String?
   banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
+  sessions          Session[]
+  accounts          Account[]
+  loansBorrowed     Loan[]             @relation("LoansBorrowed")
+  loansReturned     Loan[]             @relation("LoansReturned")
+  venueReservations VenueReservation[] @relation("VenueReservations")
+  auditLogs         AuditLog[]         @relation("AuditLogs")
 
   @@unique([email])
   @@map("user")
@@ -80,4 +84,109 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// ─── Business enums ───────────────────────────────────────────────────────────
+
+enum BorrowerStatus {
+  active
+  inactive
+}
+
+enum CopyStatus {
+  available
+  borrowed
+  lost
+}
+
+enum ReservationStatus {
+  booked
+  cancelled
+  completed
+}
+
+// ─── Business models ──────────────────────────────────────────────────────────
+
+model Borrower {
+  id        String         @id @default(uuid()) @db.Uuid
+  cardQr    String         @unique @map("card_qr")
+  fullName  String         @map("full_name")
+  email     String?
+  phone     String?
+  status    BorrowerStatus @default(active)
+  createdAt DateTime       @default(now()) @map("created_at")
+  loans     Loan[]
+
+  @@map("borrowers")
+}
+
+model Book {
+  id        String     @id @default(uuid()) @db.Uuid
+  title     String
+  author    String?
+  isbn      String?
+  createdAt DateTime   @default(now()) @map("created_at")
+  copies    BookCopy[]
+
+  @@map("books")
+}
+
+model BookCopy {
+  id        String     @id @default(uuid()) @db.Uuid
+  bookId    String     @map("book_id") @db.Uuid
+  copyQr    String     @unique @map("copy_qr")
+  status    CopyStatus @default(available)
+  createdAt DateTime   @default(now()) @map("created_at")
+  book      Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  loans     Loan[]
+
+  @@index([bookId])
+  @@map("book_copies")
+}
+
+model Loan {
+  id         String    @id @default(uuid()) @db.Uuid
+  copyId     String    @map("copy_id") @db.Uuid
+  borrowerId String    @map("borrower_id") @db.Uuid
+  borrowedBy String    @map("borrowed_by")   // -> user(id), TEXT (no @db.Uuid)
+  returnedTo String?   @map("returned_to")   // -> user(id), TEXT (no @db.Uuid)
+  borrowedAt DateTime  @default(now()) @map("borrowed_at")
+  dueAt      DateTime  @map("due_at")
+  returnedAt DateTime? @map("returned_at")
+  copy           BookCopy @relation(fields: [copyId], references: [id])
+  borrower       Borrower @relation(fields: [borrowerId], references: [id])
+  borrowedByUser User     @relation("LoansBorrowed", fields: [borrowedBy], references: [id])
+  returnedToUser User?    @relation("LoansReturned", fields: [returnedTo], references: [id])
+
+  @@index([copyId])
+  @@index([borrowerId])
+  @@index([borrowedBy])
+  @@map("loans")
+}
+
+model VenueReservation {
+  id         String            @id @default(uuid()) @db.Uuid
+  reservedBy String            @map("reserved_by")   // -> user(id), TEXT (no @db.Uuid)
+  startsAt   DateTime          @map("starts_at") @db.Timestamptz(6)
+  endsAt     DateTime          @map("ends_at") @db.Timestamptz(6)
+  status     ReservationStatus @default(booked)
+  createdAt  DateTime          @default(now()) @map("created_at")
+  reservedByUser User          @relation("VenueReservations", fields: [reservedBy], references: [id])
+
+  @@index([reservedBy])
+  @@map("venue_reservations")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actor      String?  @map("actor")          // -> user(id), TEXT (no @db.Uuid)
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+  actorUser  User?    @relation("AuditLogs", fields: [actor], references: [id])
+
+  @@index([actor])
+  @@map("audit_logs")
 }
