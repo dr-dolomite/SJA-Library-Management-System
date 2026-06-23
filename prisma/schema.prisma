@@ -111,7 +111,7 @@ model Borrower {
   id        String         @id @default(uuid()) @db.Uuid
   cardQr    String         @unique @map("card_qr")
   fullName  String         @map("full_name")
-  email     String?
+  email     String?        @unique
   phone     String?
   status    BorrowerStatus @default(active)
   createdAt DateTime       @default(now()) @map("created_at")

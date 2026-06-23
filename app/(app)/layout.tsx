@@ -1,7 +1,6 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { auth } from "@/lib/auth";
+import { getCurrentStaff } from "@/lib/session";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
@@ -18,17 +17,9 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  const user = {
-    name: session.user.name ?? session.user.email,
-    email: session.user.email,
-    role: (session.user as { role?: string | null }).role ?? "librarian",
-  };
+  const staff = await getCurrentStaff();
+  if (!staff) redirect("/login");
+  const user = { name: staff.fullName, email: staff.email, role: staff.role };
 
   return (
     <SidebarProvider>

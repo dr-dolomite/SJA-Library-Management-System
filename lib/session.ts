@@ -11,5 +11,5 @@ export async function getCurrentStaff() {
   const role = ((user as { role?: string | null }).role ?? "librarian") as
     | "admin"
     | "librarian";
-  return { id: user.id, fullName: user.name ?? user.email, role };
+  return { id: user.id, fullName: user.name ?? user.email, email: user.email, role };
 }

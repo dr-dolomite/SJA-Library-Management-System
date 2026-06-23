@@ -1,31 +1,33 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { newCardToken } from "@/lib/qr";
-import { insertBorrower } from "@/lib/data/borrowers";
-import { logActivity } from "@/lib/audit";
-import { getCurrentStaff } from "@/lib/session";
+import { createBorrowerWithAudit } from "@/lib/data/borrowers";
+
+// Fix 6: validate server-side (HTML types are client-only / bypassable in a Server Action).
+const BorrowerForm = z.object({
+  full_name: z.string().trim().min(1, "Name is required"),
+  email: z.union([z.string().trim().email("Enter a valid email"), z.literal("")]).optional(),
+  phone: z.string().trim().optional(),
+});
 
 export async function createBorrower(formData: FormData) {
-  const staff = await getCurrentStaff();
-  if (!staff) throw new Error("Not authenticated");
-
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  if (!fullName) throw new Error("Name is required");
-
-  const borrower = await insertBorrower({
-    cardQr: newCardToken(),
-    fullName,
-    email: (formData.get("email") as string) || null,
-    phone: (formData.get("phone") as string) || null,
+  const parsed = BorrowerForm.safeParse({
+    full_name: formData.get("full_name"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
   });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Invalid borrower details");
+  }
+  const { full_name, email, phone } = parsed.data;
 
-  await logActivity({
-    actor: staff.id,
-    action: "borrower.create",
-    entityType: "borrower",
-    entityId: borrower.id,
-    metadata: { fullName },
+  await createBorrowerWithAudit({
+    cardQr: newCardToken(),
+    fullName: full_name,
+    email: email ? email : null,
+    phone: phone ? phone : null,
   });
 
   revalidatePath("/borrowers");

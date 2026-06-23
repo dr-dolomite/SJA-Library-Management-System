@@ -1,4 +1,5 @@
 import "server-only";
+import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type AuditInput = {
@@ -20,10 +21,12 @@ export function buildAuditRow(input: AuditInput) {
   };
 }
 
-export async function logActivity(input: AuditInput) {
+// DB-shaped row: narrows metadata to Prisma's JSON input type (no `any`).
+export function auditRowForDb(input: AuditInput): Prisma.AuditLogUncheckedCreateInput {
   const row = buildAuditRow(input);
-  await prisma.auditLog.create({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: { ...row, metadata: row.metadata as any },
-  });
+  return { ...row, metadata: row.metadata as Prisma.InputJsonValue };
+}
+
+export async function logActivity(input: AuditInput) {
+  await prisma.auditLog.create({ data: auditRowForDb(input) });
 }
