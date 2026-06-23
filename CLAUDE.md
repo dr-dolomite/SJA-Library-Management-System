@@ -47,15 +47,18 @@ the task — the tool disappears). Personality: **efficient, calm, trustworthy**
 tool disappears, one state of truth shown plainly, earned familiarity over novelty, density with
 breathing room, trust through consistency. Bar: **WCAG 2.1 AA**, **fully responsive** (desktop
 desk + tablet shelf-scanning + phone lookups). Anti-references: dated gov/library software,
-generic AI-SaaS templates, heavy enterprise. Visual system (`DESIGN.md`) is deferred until the
-first real surface commits a brand color — branding stays at shadcn defaults until then.
+generic AI-SaaS templates, heavy enterprise. Visual system lives in **`DESIGN.md`** (+ tokens in
+`app/globals.css`): St. Joseph's **pine green `#1a4231`** is the one primary-action color,
+**gold `#c8a126`** is reserved for selection/emphasis (the "Gilt Rule"), white content surface,
+deep-green sidebar. Type is **Geist** (UI) + **Geist Mono** (QR tokens / IDs / data). All tokens
+OKLCH, AA-verified.
 
 ## Stack
 
 Next.js 16 (App Router, **React Server Components**), React 19, TypeScript, Tailwind v4,
 **shadcn** (`radix-nova` style, `neutral` base — see `components.json`), **Supabase** (Postgres +
-Auth), **pnpm**. Branding is intentionally left at shadcn defaults; Impeccable branding is wired
-manually later.
+Auth), **pnpm**. St. Joseph's brand tokens (pine green / gold) are wired in `app/globals.css`;
+see `DESIGN.md` for the system.
 
 ## Commands
 
