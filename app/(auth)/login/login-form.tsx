@@ -101,17 +101,20 @@ export default function LoginForm({
 
       if (error) {
         setErrorMessage(mapAuthError(error));
+        setIsSubmitting(false);
         return;
       }
 
       // Success — refresh the RSC tree so the server session is picked up,
       // then navigate to the post-login destination.
+      // isSubmitting intentionally NOT reset here: the spinner persists
+      // through router.refresh() + router.push() until the page unmounts,
+      // preventing a flicker back to "Sign in" on slow RSC refreshes.
       router.refresh();
       router.push(redirectTo);
     } catch {
       // Network failures, unexpected throws from better-fetch, etc.
       setErrorMessage("Something went wrong. Please try again.");
-    } finally {
       setIsSubmitting(false);
     }
   }
@@ -187,7 +190,6 @@ export default function LoginForm({
                 "disabled:pointer-events-none",
               )}
               disabled={isSubmitting}
-              tabIndex={0}
             >
               {showPassword ? (
                 <EyeOff className="size-4" aria-hidden="true" />

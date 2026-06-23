@@ -42,10 +42,14 @@ export default function BrandPanel() {
       />
 
       {/* ── Foreground content (above scrims) ───────────────────────────── */}
-      <div className="relative z-10 flex h-full flex-col items-center justify-between px-10 py-12 text-primary-foreground">
+      {/* Anchored low: the seal crowns the wordmark as one institutional
+          lockup, sitting where the gradient is densest. The upper field is
+          left as quiet building texture. */}
+      <div className="relative z-10 flex h-full flex-col items-center justify-end px-10 py-12 text-primary-foreground">
 
-        {/* Top: school seal */}
-        <div className="flex flex-col items-center gap-3">
+        {/* Institutional lockup — seal → gold divider → wordmark */}
+        <div className="flex flex-col items-center gap-4 text-center">
+          {/* School seal — crowns the lockup */}
           <Image
             src="/sja-logo.png"
             alt="St. Joseph's Academy seal"
@@ -54,11 +58,9 @@ export default function BrandPanel() {
             priority
             className="rounded-full drop-shadow-lg"
           />
-        </div>
 
-        {/* Bottom: institutional lockup */}
-        <div className="flex flex-col items-center gap-3 text-center">
-          {/* Thin gold rule — ceremonial accent only */}
+          {/* Thin gold rule — the "neck" separating crest from wordmark
+              (single rule, kept to the Gilt Rule) */}
           <div className="h-px w-16 bg-gold opacity-70" aria-hidden />
 
           <div className="flex flex-col items-center gap-1">
@@ -74,9 +76,6 @@ export default function BrandPanel() {
               Library Management System
             </p>
           </div>
-
-          {/* Thin gold rule — bottom mirror */}
-          <div className="h-px w-16 bg-gold opacity-70" aria-hidden />
         </div>
       </div>
     </div>
