@@ -170,6 +170,7 @@ model VenueReservation {
   startsAt   DateTime          @map("starts_at") @db.Timestamptz(6)
   endsAt     DateTime          @map("ends_at") @db.Timestamptz(6)
   status     ReservationStatus @default(booked)
+  purpose    String?           @map("purpose")
   createdAt  DateTime          @default(now()) @map("created_at")
   reservedByUser User          @relation("VenueReservations", fields: [reservedBy], references: [id])
 

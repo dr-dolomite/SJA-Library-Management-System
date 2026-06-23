@@ -116,16 +116,13 @@ function NavGroup({
                 isActive={active}
                 tooltip={item.title}
                 className={cn(
+                  // Vanilla shadcn sidebar highlight: the active item is just
+                  // the base sidebar-accent pill + accent-foreground text +
+                  // medium weight (handled by SidebarMenuButton itself). The
+                  // brand shows through only via the green-tinted tokens, not a
+                  // bespoke chip. The translate/scale is the app's standard
+                  // motion polish, not part of the highlight.
                   "transition-all duration-200 ease-apple hover:translate-x-0.5 active:scale-[0.98]",
-                  // Hover sits quieter than the selected chip so they never
-                  // read as the same state.
-                  "hover:bg-sidebar-accent/50",
-                  // The selected item is a gilt-edged chip: a clearly lighter
-                  // pill gives it presence, and a 1px gold inset border is the
-                  // "you are here" gilt — anchored to the whole item, legible
-                  // as a line rather than low-contrast gold text/icon.
-                  "data-[active=true]:bg-[oklch(0.4_0.055_163)]",
-                  "data-[active=true]:shadow-[inset_0_0_0_1px_oklch(0.725_0.14_90/0.6)]",
                 )}
               >
                 <Link href={item.href}>

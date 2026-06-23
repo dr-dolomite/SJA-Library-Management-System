@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Users } from "lucide-react";
 import { listBorrowers } from "@/lib/data/borrowers";
 import { createBorrower } from "./actions";
@@ -111,7 +112,14 @@ export default async function BorrowersPage() {
             <TableBody>
               {borrowers.map((b) => (
                 <TableRow key={b.id}>
-                  <TableCell className="font-medium">{b.fullName}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/borrowers/${b.id}`}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {b.fullName}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <span className="font-mono text-xs text-muted-foreground">
                       {b.cardQr}

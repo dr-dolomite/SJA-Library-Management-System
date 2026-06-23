@@ -91,14 +91,19 @@
   --chart-4: oklch(0.45 0.04 178);
   --chart-5: oklch(0.82 0.09 88);
   --radius: 0.625rem;
-  --sidebar: oklch(0.3 0.05 163);
-  --sidebar-foreground: oklch(0.93 0.015 163);
-  --sidebar-primary: oklch(0.725 0.14 90);
-  --sidebar-primary-foreground: oklch(0.26 0.03 90);
-  --sidebar-accent: oklch(0.36 0.05 163);
-  --sidebar-accent-foreground: oklch(0.96 0.01 163);
-  --sidebar-border: oklch(0.42 0.04 163);
-  --sidebar-ring: oklch(0.725 0.14 90);
+  /* Classic light sidebar — a near-white panel tinted a hair toward the brand
+     hue (163) so it reads as the library's own surface, just barely off the
+     white content. Pine green is the primary/active accent (replacing shadcn's
+     near-black); gold returns as the active item's inset gilt border, applied
+     in app-sidebar.tsx. Flat by default — no panel gradient. */
+  --sidebar: oklch(0.975 0.006 163);
+  --sidebar-foreground: oklch(0.24 0.02 163);
+  --sidebar-primary: oklch(0.345 0.055 163);
+  --sidebar-primary-foreground: oklch(0.985 0.008 163);
+  --sidebar-accent: oklch(0.95 0.014 163);
+  --sidebar-accent-foreground: oklch(0.3 0.04 163);
+  --sidebar-border: oklch(0.9 0.008 163);
+  --sidebar-ring: oklch(0.345 0.055 163);
 }
 
 .dark {
@@ -127,14 +132,17 @@
   --chart-3: oklch(0.7 0.07 163);
   --chart-4: oklch(0.55 0.05 178);
   --chart-5: oklch(0.85 0.1 88);
-  --sidebar: oklch(0.22 0.025 163);
-  --sidebar-foreground: oklch(0.93 0.015 163);
-  --sidebar-primary: oklch(0.78 0.14 90);
-  --sidebar-primary-foreground: oklch(0.22 0.03 90);
-  --sidebar-accent: oklch(0.3 0.03 163);
-  --sidebar-accent-foreground: oklch(0.96 0.01 163);
+  /* Classic dark sidebar — a dark green-tinted panel sitting just off the dark
+     content bg. The green accent lightens (matching dark --primary) so it holds
+     contrast on the dark surface; the gold gilt border carries through. */
+  --sidebar: oklch(0.215 0.014 163);
+  --sidebar-foreground: oklch(0.93 0.012 163);
+  --sidebar-primary: oklch(0.6 0.095 163);
+  --sidebar-primary-foreground: oklch(0.16 0.02 163);
+  --sidebar-accent: oklch(0.27 0.02 163);
+  --sidebar-accent-foreground: oklch(0.93 0.012 163);
   --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.78 0.14 90);
+  --sidebar-ring: oklch(0.6 0.095 163);
 }
 
 @layer base {
@@ -146,47 +154,6 @@
   }
   html {
     @apply font-sans;
-  }
-
-  /* ── The lit reading-room panel ──────────────────────────────────────────
-     The sidebar keeps St. Joseph's pine green, but instead of a flat slab it is
-     lit from above: a soft ambient glow near the brand, a gentle vertical
-     gradient deepening toward the floor, and a 1px specular highlight on the
-     top edge. Same identity, far less visual weight — the green now reads as a
-     surface with air rather than a wall. Applied to both the desktop panel and
-     the mobile off-canvas drawer; `--sidebar` stays the solid fallback.
-     ──────────────────────────────────────────────────────────────────────── */
-  [data-slot="sidebar-inner"],
-  [data-slot="sidebar"][data-mobile="true"] {
-    background-image:
-      radial-gradient(
-        135% 95% at 50% -25%,
-        oklch(0.43 0.062 163 / 0.85),
-        transparent 58%
-      ),
-      linear-gradient(
-        177deg,
-        oklch(0.35 0.055 163) 0%,
-        oklch(0.295 0.05 163) 48%,
-        oklch(0.25 0.04 163) 100%
-      );
-    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.07);
-  }
-  .dark [data-slot="sidebar-inner"],
-  .dark [data-slot="sidebar"][data-mobile="true"] {
-    background-image:
-      radial-gradient(
-        135% 95% at 50% -25%,
-        oklch(0.33 0.045 163 / 0.9),
-        transparent 58%
-      ),
-      linear-gradient(
-        177deg,
-        oklch(0.25 0.03 163) 0%,
-        oklch(0.205 0.025 163) 48%,
-        oklch(0.17 0.02 163) 100%
-      );
-    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
   }
 }
 
@@ -232,6 +199,12 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-view-in,
   .animate-nav-item-in {
+    animation: none;
+  }
+  /* Overlays (popover, dropdown) open/close via tailwindcss-animate enter/exit
+     utilities — collapse those to an instant change too. */
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"] {
     animation: none;
   }
 }
