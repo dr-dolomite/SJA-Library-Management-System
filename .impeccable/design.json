@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-23T00:00:00Z",
+  "title": "Design System: SJA-LMS",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Pine Green",
+        "canonical": "oklch(0.345 0.055 163)",
+        "tonalRamp": [
+          "oklch(0.15 0.03 163)",
+          "oklch(0.24 0.045 163)",
+          "oklch(0.345 0.055 163)",
+          "oklch(0.45 0.06 163)",
+          "oklch(0.55 0.065 163)",
+          "oklch(0.67 0.06 163)",
+          "oklch(0.8 0.045 163)",
+          "oklch(0.93 0.02 163)"
+        ]
+      },
+      "gold": {
+        "role": "secondary",
+        "displayName": "Academy Gold",
+        "canonical": "oklch(0.725 0.14 90)",
+        "tonalRamp": [
+          "oklch(0.2 0.04 90)",
+          "oklch(0.31 0.07 90)",
+          "oklch(0.43 0.1 90)",
+          "oklch(0.55 0.13 90)",
+          "oklch(0.65 0.14 90)",
+          "oklch(0.725 0.14 90)",
+          "oklch(0.83 0.1 90)",
+          "oklch(0.93 0.05 90)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.24 0.02 163)",
+        "tonalRamp": [
+          "oklch(0.18 0.018 163)",
+          "oklch(0.3 0.02 163)",
+          "oklch(0.44 0.025 163)",
+          "oklch(0.58 0.02 163)",
+          "oklch(0.7 0.015 163)",
+          "oklch(0.82 0.012 163)",
+          "oklch(0.9 0.008 163)",
+          "oklch(0.97 0.005 163)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page-level titles only; low ceiling for product UI." },
+      "headline": { "displayName": "Headline", "purpose": "Section headings within a page." },
+      "title": { "displayName": "Title", "purpose": "Card, panel, and dialog titles." },
+      "body": { "displayName": "Body", "purpose": "Default UI text; prose caps at 65–75ch." },
+      "label": { "displayName": "Label", "purpose": "Buttons, form labels, table headers, nav items." },
+      "mono": { "displayName": "Mono", "purpose": "QR tokens (cpy_…, brw_…), IDs, timestamps, numeric columns." }
+    },
+    "shadows": [
+      { "name": "raised", "value": "0 1px 2px oklch(0.24 0.02 163 / 0.06)", "purpose": "Barely-there lift for a resting pressable surface (rare)." },
+      { "name": "overlay", "value": "0 8px 24px -6px oklch(0.24 0.02 163 / 0.18)", "purpose": "Menus, popovers, dialogs — content that floats off the page." }
+    ],
+    "motion": [
+      { "name": "ease-out-quint", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Default easing for state transitions and reveals." },
+      { "name": "duration-fast", "value": "150ms", "purpose": "Hover, focus, and small state changes." },
+      { "name": "duration-base", "value": "200ms", "purpose": "Panel, drawer, and popover transitions." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one and only primary-action color. Pine green fill, near-white text.",
+      "html": "<button class=\"ds-btn-primary\">Sign in to continue</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 14px; border: none; border-radius: 0.625rem; background: var(--primary); color: var(--primary-foreground); font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: background 150ms cubic-bezier(0.22,1,0.36,1), transform 150ms cubic-bezier(0.22,1,0.36,1); } .ds-btn-primary:hover { background: color-mix(in oklch, var(--primary), transparent 20%); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action that sits beside a primary. White fill, hairline border.",
+      "html": "<button class=\"ds-btn-outline\">View documentation</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 14px; border: 1px solid var(--border); border-radius: 0.625rem; background: var(--background); color: var(--foreground); font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: background 150ms cubic-bezier(0.22,1,0.36,1); } .ds-btn-outline:hover { background: var(--muted); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); }"
+    },
+    {
+      "name": "Gold Badge",
+      "kind": "chip",
+      "refersTo": "badge-gold",
+      "description": "The ceremonial 'current/featured' marker. Used sparingly (the Gilt Rule).",
+      "html": "<span class=\"ds-badge-gold\">Foundation</span>",
+      "css": ".ds-badge-gold { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 0.375rem; background: var(--gold); color: var(--gold-foreground); font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; }"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "badge-gold",
+      "description": "Loan/reservation state. Color is always paired with a word — never hue alone.",
+      "html": "<span class=\"ds-status\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg>Available</span>",
+      "css": ".ds-status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 0.375rem; background: var(--secondary); color: var(--secondary-foreground); font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "White fill, hairline border, green focus halo. No glow.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search the catalog\" />",
+      "css": ".ds-input { height: 36px; width: 100%; padding: 0 12px; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--background); color: var(--foreground); font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; transition: border-color 150ms cubic-bezier(0.22,1,0.36,1), box-shadow 150ms cubic-bezier(0.22,1,0.36,1); } .ds-input::placeholder { color: var(--muted-foreground); } .ds-input:focus-visible { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 50%); }"
+    },
+    {
+      "name": "Mono Token",
+      "kind": "custom",
+      "refersTo": "input",
+      "description": "How an opaque QR copy/borrower token is rendered — monospace, inset chip.",
+      "html": "<code class=\"ds-token\">cpy_8f3a2b7c</code>",
+      "css": ".ds-token { display: inline-block; padding: 2px 6px; border-radius: 0.375rem; background: var(--secondary); color: var(--secondary-foreground); font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace; font-size: 0.8125rem; }"
+    },
+    {
+      "name": "Sidebar Nav Item (active)",
+      "kind": "nav",
+      "refersTo": "sidebar-item-active",
+      "description": "The deep-green nav panel with a gold 'you are here' marker on the active item.",
+      "html": "<nav class=\"ds-sidebar\"><a class=\"ds-nav-item\" href=\"#\">Catalog</a><a class=\"ds-nav-item ds-nav-item--active\" href=\"#\">Circulation</a><a class=\"ds-nav-item\" href=\"#\">Borrowers</a></nav>",
+      "css": ".ds-sidebar { display: flex; flex-direction: column; gap: 2px; width: 200px; padding: 12px; border-radius: 0.625rem; background: var(--sidebar); font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif; } .ds-nav-item { display: block; padding: 8px 12px; border-radius: 0.5rem; color: var(--sidebar-foreground); font-size: 0.8125rem; font-weight: 500; text-decoration: none; transition: background 150ms cubic-bezier(0.22,1,0.36,1); } .ds-nav-item:hover { background: var(--sidebar-accent); } .ds-nav-item--active { position: relative; background: var(--sidebar-accent); } .ds-nav-item--active::before { content: \"\"; position: absolute; left: 4px; top: 50%; transform: translateY(-50%); width: 3px; height: 16px; border-radius: 2px; background: var(--sidebar-primary); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Reading Room",
+    "overview": "SJA-LMS should feel like a well-kept academic reading room rendered as software: ordered, quiet, and authoritative. The deep pine green of St. Joseph's carries the structure while the gold appears the way brass and gilt-lettering do in a real library: sparingly, only on the thing that matters right now. White is the page itself. Staff are mid-task and often mid-conversation with a patron; the interface earns trust by being exact and getting out of the way, never by performing. Color is Restrained: one workhorse accent (pine green) plus one ceremonial accent (gold) held to a few percent of any screen. The content area stays white and calm; the brand identity lives in a single drenched green sidebar.",
+    "keyCharacteristics": [
+      "Pine green is the only primary-action color; gold is for selection and emphasis only.",
+      "White content surface, one deep-green navigation panel for identity.",
+      "One type family (Geist) for the entire UI; monospace strictly for tokens and data.",
+      "Fixed rem type scale (~1.2 ratio), not fluid.",
+      "Status is never color-only; every state pairs color with text or icon."
+    ],
+    "rules": [
+      { "name": "The Gilt Rule", "body": "Gold behaves like gilt lettering: it touches ≤ a few percent of any screen and only marks the one thing that is current, selected, or needs the eye. The moment gold fills an area or repeats across a grid, the rule is broken.", "section": "colors" },
+      { "name": "The One-Green Rule", "body": "There is exactly one action color. If something is clickable-primary, it is Pine Green; if it is Pine Green, it is the primary action. Do not introduce a second button color to mean 'also important.'", "section": "colors" },
+      { "name": "The Mono-Means-Token Rule", "body": "Monospace is a signal, not a style. It appears only where the content is a machine token or a column that must align. A label or heading is never set in mono for flavor.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "A surface is flat at rest. If it has a shadow, it must actually float (it opens, it overlays, it can be dismissed). A shadow on static content is always wrong; use a hairline border or a quiet-surface fill instead.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Pine Green (#1a4231) as the one and only primary-action color — buttons, links, active states, focus rings.",
+      "Do keep Academy Gold (#c8a126) to ≤ a few percent of any screen, marking only what is current/selected (the Gilt Rule).",
+      "Do keep the content area white and calm; let the deep-green sidebar carry brand identity.",
+      "Do pair every loan/reservation status with text or an icon, not color alone (WCAG AA, color-blind staff).",
+      "Do set QR tokens, IDs, and numeric columns in Geist Mono; keep all other text in Geist.",
+      "Do hold body and placeholder text at ≥4.5:1 — use Ink (#1d2b25) and Muted Ink (#5b6b63), never a lighter gray.",
+      "Do keep resting surfaces flat; reserve shadows for things that actually float."
+    ],
+    "donts": [
+      "Don't recreate dated gov/library software: cramped gray tables, tiny hit-targets, dense forms with no hierarchy.",
+      "Don't drift toward a generic AI-SaaS template: purple gradients, hero-metric dashboards, endless identical icon-heading-text card grids.",
+      "Don't build heavy-enterprise density: deeply nested navigation or intimidating control panels.",
+      "Don't map gold onto shadcn's --accent token — that is the hover-surface. Use the dedicated --gold / --gold-foreground tokens.",
+      "Don't introduce a second button fill color to mean 'also important' (the One-Green Rule).",
+      "Don't set labels or headings in monospace for flavor (the Mono-Means-Token Rule).",
+      "Don't use a colored side-stripe (border-left > 1px), gradient text, or decorative glassmorphism anywhere.",
+      "Don't put a drop shadow on static, resting content (the Flat-By-Default Rule)."
+    ]
+  }
+}

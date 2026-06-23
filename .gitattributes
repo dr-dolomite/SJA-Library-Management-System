@@ -1,0 +1,15 @@
+# Normalize line endings: store text as LF in the repo regardless of OS.
+* text=auto eol=lf
+
+# Binary assets — never normalize.
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg text
+*.woff binary
+*.woff2 binary
+
+# Generated/lock files — keep diffs collapsed in review tools.
+pnpm-lock.yaml linguist-generated=true -diff

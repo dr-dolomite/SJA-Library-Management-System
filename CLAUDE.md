@@ -40,12 +40,25 @@ Each feature's full design, schema, and usage live in **`doc/<feature>/`** (see 
 When a feature ships, add a one-line reference under "Build order" pointing to its `doc/` folder;
 put the depth in `doc/`, not here.
 
+## Design Context
+
+Strategic design intent lives in **`PRODUCT.md`** (root). Register: **product** (design serves
+the task — the tool disappears). Personality: **efficient, calm, trustworthy**. Principles: the
+tool disappears, one state of truth shown plainly, earned familiarity over novelty, density with
+breathing room, trust through consistency. Bar: **WCAG 2.1 AA**, **fully responsive** (desktop
+desk + tablet shelf-scanning + phone lookups). Anti-references: dated gov/library software,
+generic AI-SaaS templates, heavy enterprise. Visual system lives in **`DESIGN.md`** (+ tokens in
+`app/globals.css`): St. Joseph's **pine green `#1a4231`** is the one primary-action color,
+**gold `#c8a126`** is reserved for selection/emphasis (the "Gilt Rule"), white content surface,
+deep-green sidebar. Type is **Geist** (UI) + **Geist Mono** (QR tokens / IDs / data). All tokens
+OKLCH, AA-verified.
+
 ## Stack
 
 Next.js 16 (App Router, **React Server Components**), React 19, TypeScript, Tailwind v4,
 **shadcn** (`radix-nova` style, `neutral` base — see `components.json`), **Supabase** (Postgres +
-Auth), **pnpm**. Branding is intentionally left at shadcn defaults; Impeccable branding is wired
-manually later.
+Auth), **pnpm**. St. Joseph's brand tokens (pine green / gold) are wired in `app/globals.css`;
+see `DESIGN.md` for the system.
 
 ## Commands
 
@@ -119,5 +132,5 @@ layer, QR tokens → **(2) Circulation** → **(3) Venue reservation** → **(4)
 
 Fresh `create-next-app` scaffold: `app/` (layout + page), one shadcn component
 (`components/ui/button.tsx`), `lib/utils.ts`. Supabase, the data layer, migrations, and tests do
-not exist yet — the architecture above is the agreed target, not yet built. The repository is not
-under git yet.
+not exist yet — the architecture above is the agreed target, not yet built. Foundation is
+specced and planned in `doc/foundation/` (design + implementation plan), not yet implemented.
