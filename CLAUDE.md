@@ -72,8 +72,8 @@ pnpm start          # serve the production build
 pnpm lint           # eslint (eslint-config-next)
 ```
 
-Tests use **Vitest** (`pnpm test`, `pnpm test <file>` for one) — add it when the first
-testable unit lands; it is not installed yet.
+Tests use **Vitest** (`pnpm test`, `pnpm test <file>` for one). `server-only` modules are
+unit-testable via the `vitest-mocks/server-only.ts` stub wired into `vitest.config.ts`.
 
 ## Architecture (the rules that matter)
 
@@ -131,9 +131,10 @@ a Postgres gist exclusion constraint), `audit_logs` (the admin "debug logs" view
 
 ## Build order
 
-Built slice by slice, not all at once: **(1) Foundation** — auth, schema, role-gated shell, data
-layer, QR tokens → **(2) Circulation** → **(3) Venue reservation** → **(4) CSV/Excel export** →
-**(5) Admin: user management + audit logs** → **(6) Local backup daemon** (`pg_dump` on a schedule).
+Built slice by slice, not all at once: **(1) Foundation** ✓ *shipped* — auth, schema, role-gated
+shell, data layer, QR tokens (design + plan in `doc/foundation/`) → **(2) Circulation** →
+**(3) Venue reservation** → **(4) CSV/Excel export** → **(5) Admin: user management + audit logs** →
+**(6) Local backup daemon** (`pg_dump` on a schedule).
 
 ## Conventions
 
@@ -145,7 +146,21 @@ layer, QR tokens → **(2) Circulation** → **(3) Venue reservation** → **(4)
 
 ## Current state
 
-Fresh `create-next-app` scaffold: `app/` (layout + page), one shadcn component
-(`components/ui/button.tsx`), `lib/utils.ts`. Prisma, Better Auth, the data layer, migrations, and
-tests do not exist yet — the architecture above is the agreed target, not yet built. Foundation is
-specced and planned in `doc/foundation/` (design + implementation plan), not yet implemented.
+**Foundation has shipped** (merged to `main`). In place:
+
+- **Prisma 7 over Supabase Postgres** via a driver adapter — pooled `DATABASE_URL` at runtime,
+  `DIRECT_URL` for migrations through `prisma.config.ts`; the server-only client singleton is
+  `lib/prisma.ts`.
+- **Full business schema** (`borrowers`, `books`, `book_copies`, `loans`, `venue_reservations`,
+  `audit_logs` + enums) with the `venue_no_overlap` gist exclusion constraint enforcing booking
+  overlap at the DB. Migrations live in `prisma/migrations/`.
+- **Better Auth** (admin plugin, sign-up disabled) with a seeded first admin (`prisma/seed.ts`,
+  `pnpm db:seed`), the role-gated app shell, and the login page.
+- **Opaque QR tokens** — `lib/qr.ts` (`newCopyToken`/`newCardToken`).
+- **The reference data layer** — `lib/data/borrowers.ts` (session-gated reads/writes via
+  `lib/session.ts`'s `getCurrentStaff`), `lib/audit.ts` (the atomic write+audit pattern in one
+  `prisma.$transaction`), and the borrowers vertical slice (`app/(app)/borrowers/`). This is the
+  shape every later module copies. Vitest suites (qr + audit) are green.
+
+Next slice: **(2) Circulation** — borrow/return of copies over `book_copies` / `loans`, copying the
+borrowers slice's data-layer + audit pattern. Not yet started.
